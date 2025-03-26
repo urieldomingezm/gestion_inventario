@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Hotel Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding: 25px 0;
+        }
+        .welcome-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        .stat-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center text-dark mb-0">
+                            <i class="fas fa-hotel me-2"></i>Sistema de Inventario
+                        </h3>
+                    </div>
+                    <div class="card-body px-4 py-5">
+                        <div class="text-center mb-5">
+                            <i class="fas fa-check-circle welcome-icon"></i>
+                            <h4>¡Bienvenido al Sistema!</h4>
+                            <p class="text-muted">Has iniciado sesión correctamente</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <a href="{% url 'equipment:equipo_list' %}" class="text-decoration-none">
+                                    <div class="stat-card text-center">
+                                        <i class="fas fa-laptop stat-icon"></i>
+                                        <h5>Equipos de Cómputo</h5>
+                                        <p class="mb-0">Gestión de Equipos</p>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{% url 'equipment:ubicacion_list' %}" class="text-decoration-none">
+                                    <div class="stat-card text-center">
+                                        <i class="fas fa-map-marker-alt stat-icon"></i>
+                                        <h5>Ubicaciones</h5>
+                                        <p class="mb-0">Gestión de Ubicaciones</p>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{% url 'equipment:movimiento_list' %}" class="text-decoration-none">
+                                    <div class="stat-card text-center">
+                                        <i class="fas fa-exchange-alt stat-icon"></i>
+                                        <h5>Movimientos</h5>
+                                        <p class="mb-0">Control de Movimientos</p>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        {% if messages %}
+            {% for message in messages %}
+                Swal.fire({
+                    icon: '{% if message.tags == "error" %}error{% else %}success{% endif %}',
+                    title: '{{ message }}',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            {% endfor %}
+        {% endif %}
+    </script>
+
+    <style>
+        .dashboard-stats {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .recent-activities {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            height: 300px;
+            overflow-y: auto;
+        }
+        .activity-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+        .activity-item:hover {
+            transform: translateX(5px);
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .dashboard-title {
+            color: #2d3748;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        }
+    </style>
+
+    <!-- Replace the dashboard-stats div with this updated version -->
+    <div class="container">
+        <div class="dashboard-stats">
+            <h4 class="dashboard-title">
+                <i class="fas fa-chart-line me-2"></i>Dashboard de Inventario
+            </h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <canvas id="equiposPorCategoria"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <canvas id="equiposPorEstado"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="chart-container">
+                        <canvas id="equiposPorUbicacion"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="recent-activities">
+                        <h5 class="mb-4">
+                            <i class="fas fa-history me-2 text-primary"></i>
+                            Movimientos Recientes
+                        </h5>
+                        {% for movimiento in movimientos_recientes %}
+                        <div class="activity-item">
+                            <small class="text-muted d-block mb-1">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ movimiento.fecha_movimiento|date:"d/m/Y H:i" }}
+                            </small>
+                            <p class="mb-0 text-dark">
+                                <strong>{{ movimiento.equipo.nombre }}</strong>
+                                <span class="text-primary">{{ movimiento.tipo }}</span>
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this before closing body tag -->
+    <script>
+        // Datos para las gráficas
+        const categoriaData = {
+            labels: {{ equipos_por_categoria|safe|stringformat:"s"|default:"[]" }}.map(item => item.categoria__nombre),
+            datasets: [{
+                label: 'Equipos por Categoría',
+                data: {{ equipos_por_categoria|safe|stringformat:"s"|default:"[]" }}.map(item => item.total),
+                backgroundColor: [
+                    '#667eea', '#764ba2', '#63b3ed', '#48bb78', '#f6ad55'
+                ]
+            }]
+        };
+    
+        const estadoData = {
+            labels: {{ equipos_por_estado|safe|stringformat:"s"|default:"[]" }}.map(item => item.estado),
+            datasets: [{
+                label: 'Equipos por Estado',
+                data: {{ equipos_por_estado|safe|stringformat:"s"|default:"[]" }}.map(item => item.total),
+                backgroundColor: [
+                    '#48bb78', '#f6ad55', '#fc8181', '#a0aec0'
+                ]
+            }]
+        };
+    
+        const ubicacionData = {
+            labels: {{ equipos_por_ubicacion|safe|stringformat:"s"|default:"[]" }}.map(item => item.ubicacion__nombre),
+            datasets: [{
+                label: 'Equipos por Ubicación',
+                data: {{ equipos_por_ubicacion|safe|stringformat:"s"|default:"[]" }}.map(item => item.total),
+                backgroundColor: '#667eea',
+                borderColor: '#667eea',
+                borderWidth: 1
+            }]
+        };
+    
+        // Configuración de las gráficas
+        new Chart(document.getElementById('equiposPorCategoria'), {
+            type: 'doughnut',
+            data: categoriaData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribución por Categoría'
+                    }
+                }
+            }
+        });
+    
+        new Chart(document.getElementById('equiposPorEstado'), {
+            type: 'pie',
+            data: estadoData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Estado de Equipos'
+                    }
+                }
+            }
+        });
+    
+        new Chart(document.getElementById('equiposPorUbicacion'), {
+            type: 'bar',
+            data: ubicacionData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Equipos por Ubicación'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+services:
+  web:
+    build: .
+    command: sh -c "while ! nc -z db 3306; do sleep 1; done; python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+      - DB_NAME=hotel_inventory
+      - DB_USER=hotel_user
+      - DB_PASSWORD=hotel_password
+      - DB_HOST=db
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"    # Cambiado de 3306:3306 a 3307:3306
+    environment:
+      - MYSQL_DATABASE=hotel_inventory
+      - MYSQL_USER=hotel_user
+      - MYSQL_PASSWORD=hotel_password
+      - MYSQL_ROOT_PASSWORD=root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
