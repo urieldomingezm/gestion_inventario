@@ -80,7 +80,11 @@
             padding: 20px;
             margin-bottom: 25px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            height: 300px;
+            height: 350px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -93,9 +97,11 @@
                     <h2 class="mb-0">Gestión de Ubicaciones</h2>
                     <p class="text-muted mb-0">Panel de Control y Administración</p>
                 </div>
-                <button class="btn btn-primary" onclick="showCreateModal()">
-                    <i class="fas fa-plus"></i> Nueva Ubicación
-                </button>
+                <div>
+                    <a href="{% url 'home' %}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Volver al Inicio
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -224,29 +230,53 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
     <script>
+        // Initialize DataTable
         const dataTable = new simpleDatatables.DataTable("#ubicacionesTable");
+    
+        // CRUD Operations
         const ubicacionModal = new bootstrap.Modal(document.getElementById('ubicacionModal'));
         const ubicacionForm = document.getElementById('ubicacionForm');
-
+    
         function showCreateModal() {
             document.getElementById('modalTitle').textContent = 'Nueva Ubicación';
             ubicacionForm.reset();
             document.getElementById('ubicacion_id').value = '';
             ubicacionModal.show();
         }
-
+    
         function showEditModal(id) {
-            document.getElementById('modalTitle').textContent = 'Editar Ubicación';
-            fetch(`/equipment/ubicacion/${id}/`)
-                .then(response => response.json())
-                .then(data => {
+            fetch(`/equipment/ubicacion/${id}/`, {
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('modalTitle').textContent = 'Editar Ubicación';
                     document.getElementById('ubicacion_id').value = data.id;
                     document.getElementById('nombre').value = data.nombre;
-                    document.getElementById('descripcion').value = data.descripcion;
+                    document.getElementById('descripcion').value = data.descripcion || '';
                     ubicacionModal.show();
+                } else {
+                    throw new Error(data.message || 'Error al cargar la ubicación');
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Error al cargar la información de la ubicación'
                 });
+            });
         }
-
+    
         ubicacionForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -260,25 +290,34 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    Swal.fire('¡Éxito!', 'Operación completada exitosamente', 'success')
-                    .then(() => {
-                        ubicacionModal.hide();
-                        window.location.reload();
+                    ubicacionModal.hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
                     });
                 } else {
-                    Swal.fire('Error', data.message, 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message
+                    });
                 }
             });
         });
-
+    
         function deleteUbicacion(id) {
             Swal.fire({
                 title: '¿Estás seguro?',
-                text: "Esta acción no se puede revertir",
+                text: "Esta acción no se puede deshacer",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
@@ -292,38 +331,45 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            Swal.fire('¡Eliminado!', 'La ubicación ha sido eliminada.', 'success')
-                            .then(() => {
-                                window.location.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Eliminado!',
+                                text: data.message,
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                location.reload();
                             });
                         } else {
-                            Swal.fire('Error', data.message, 'error');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
                         }
                     });
                 }
             });
         }
-    </script>
-
-    <script>
-        // Gráfico de equipos por ubicación
-        new Chart(document.getElementById('equiposPorUbicacion'), {
+    
+        // Charts
+        const equiposPorUbicacionCtx = document.getElementById('equiposPorUbicacion').getContext('2d');
+        new Chart(equiposPorUbicacionCtx, {
             type: 'bar',
             data: {
                 labels: {{ ubicaciones_nombres|safe }},
                 datasets: [{
-                    label: 'Equipos',
-                    data: {{ equipos_por_ubicacion }},
-                    backgroundColor: '#1a2980',
-                    borderRadius: 5
+                    label: 'Equipos por Ubicación',
+                    data: {{ equipos_por_ubicacion|safe }},
+                    backgroundColor: 'rgba(26, 41, 128, 0.7)',
+                    borderColor: 'rgba(26, 41, 128, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    },
                     title: {
                         display: true,
                         text: 'Distribución de Equipos por Ubicación'
@@ -331,29 +377,33 @@
                 }
             }
         });
-
-        // Gráfico de movimientos por ubicación
-        new Chart(document.getElementById('movimientosPorUbicacion'), {
-            type: 'pie',
+    
+        const movimientosPorUbicacionCtx = document.getElementById('movimientosPorUbicacion').getContext('2d');
+        new Chart(movimientosPorUbicacionCtx, {
+            type: 'doughnut',
             data: {
                 labels: {{ ubicaciones_nombres|safe }},
                 datasets: [{
-                    data: {{ movimientos_por_ubicacion }},
+                    data: {{ movimientos_por_ubicacion|safe }},
                     backgroundColor: [
-                        '#1a2980',
-                        '#26d0ce',
-                        '#764ba2',
-                        '#667eea',
-                        '#4facfe'
-                    ]
+                        'rgba(26, 41, 128, 0.7)',
+                        'rgba(38, 208, 206, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(255, 205, 86, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(26, 41, 128, 1)',
+                        'rgba(38, 208, 206, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(255, 205, 86, 1)'
+                    ],
+                    borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'right'
-                    },
                     title: {
                         display: true,
                         text: 'Movimientos por Ubicación'
@@ -362,5 +412,5 @@
             }
         });
     </script>
-</body>
+    </body>
 </html>

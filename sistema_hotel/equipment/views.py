@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from .models import Equipo, Ubicacion, Movimiento, Categoria  # Added Categoria import
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count  # Add this import
 import datetime  # Add this import
 
 @login_required
@@ -16,6 +17,17 @@ def equipo_list(request):
     equipos_mantenimiento = equipos.filter(estado='En mantenimiento').count()
     equipos_fuera_servicio = equipos.filter(estado='Fuera de servicio').count()
 
+    # Data for charts
+    equipos_por_categoria = list(Equipo.objects.values('categoria__nombre')
+                               .annotate(total=Count('id'))
+                               .values_list('total', flat=True))
+    categorias_labels = list(Equipo.objects.values_list('categoria__nombre', flat=True).distinct())
+
+    equipos_por_ubicacion = list(Equipo.objects.values('ubicacion__nombre')
+                               .annotate(total=Count('id'))
+                               .values_list('total', flat=True))
+    ubicaciones_labels = list(Equipo.objects.values_list('ubicacion__nombre', flat=True).distinct())
+
     context = {
         'equipos': equipos,
         'categorias': categorias,
@@ -23,6 +35,10 @@ def equipo_list(request):
         'equipos_operativos': equipos_operativos,
         'equipos_mantenimiento': equipos_mantenimiento,
         'equipos_fuera_servicio': equipos_fuera_servicio,
+        'equipos_por_categoria': equipos_por_categoria,
+        'categorias_labels': categorias_labels,
+        'equipos_por_ubicacion': equipos_por_ubicacion,
+        'ubicaciones_labels': ubicaciones_labels,
     }
     return render(request, 'equipment/equipo_list.html', context)
 
@@ -175,3 +191,26 @@ def equipo_delete(request, pk):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'})
+
+@login_required
+def ubicacion_create(request):
+    if request.method == 'POST':
+        try:
+            nueva_ubicacion = Ubicacion.objects.create(
+                nombre=request.POST['nombre'],
+                descripcion=request.POST['descripcion']
+            )
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Ubicación creada exitosamente',
+                'id': nueva_ubicacion.id
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Método no permitido'
+    })

@@ -79,7 +79,11 @@
             padding: 20px;
             margin-bottom: 25px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            height: 300px;
+            height: 350px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -92,9 +96,11 @@
                     <h2 class="mb-0">Control de Movimientos</h2>
                     <p class="text-muted mb-0">Panel de Control y Seguimiento</p>
                 </div>
-                <button class="btn btn-primary" onclick="showCreateModal()">
-                    <i class="fas fa-plus"></i> Nuevo Movimiento
-                </button>
+                <div>
+                    <a href="{% url 'home' %}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Volver al Inicio
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -250,146 +256,151 @@
         </div>
     </div>
 
+    <!-- Add this line after the other script tags in the head section -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
     <script>
+        // Initialize DataTable
         const dataTable = new simpleDatatables.DataTable("#movimientosTable");
-        const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
-        const movimientoForm = document.getElementById('movimientoForm');
 
-        function showCreateModal() {
-            document.getElementById('modalTitle').textContent = 'Nuevo Movimiento';
-            movimientoForm.reset();
-            document.getElementById('movimiento_id').value = '';
-            movimientoModal.show();
-        }
+        // Charts
+        const movimientosPorTipoCtx = document.getElementById('movimientosPorTipo').getContext('2d');
+        new Chart(movimientosPorTipoCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ tipos_movimiento|safe }},
+                datasets: [{
+                    data: {{ movimientos_por_tipo|safe }},
+                    backgroundColor: [
+                        'rgba(26, 41, 128, 0.7)',
+                        'rgba(38, 208, 206, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(255, 205, 86, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribución de Movimientos por Tipo'
+                    }
+                }
+            }
+        });
 
-        function showEditModal(id) {
-            document.getElementById('modalTitle').textContent = 'Editar Movimiento';
-            fetch(`/equipment/movimiento/${id}/`)
-                .then(response => response.json())
-                .then(data => {
+        const movimientosPorMesCtx = document.getElementById('movimientosPorMes').getContext('2d');
+        new Chart(movimientosPorMesCtx, {
+            type: 'line',
+            data: {
+                labels: {{ meses|safe }},
+                datasets: [{
+                    label: 'Movimientos por Mes',
+                    data: {{ movimientos_por_mes|safe }},
+                    backgroundColor: 'rgba(38, 208, 206, 0.7)',
+                    borderColor: 'rgba(38, 208, 206, 1)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Tendencia de Movimientos por Mes'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+    </body>
+</html>
+
+<script>
+    // CRUD Operations
+    const movimientoModal = new bootstrap.Modal(document.getElementById('movimientoModal'));
+    const movimientoForm = document.getElementById('movimientoForm');
+
+    function showCreateModal() {
+        document.getElementById('modalTitle').textContent = 'Nuevo Movimiento';
+        movimientoForm.reset();
+        document.getElementById('movimiento_id').value = '';
+        movimientoModal.show();
+    }
+
+    function showEditModal(id) {
+        fetch(`/equipment/movimiento/${id}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('modalTitle').textContent = 'Editar Movimiento';
                     document.getElementById('movimiento_id').value = data.id;
                     document.getElementById('equipo').value = data.equipo;
                     document.getElementById('tipo').value = data.tipo;
                     document.getElementById('descripcion').value = data.descripcion;
                     document.getElementById('nueva_ubicacion').value = data.nueva_ubicacion || '';
                     movimientoModal.show();
+                }
+            });
+    }
+
+    function deleteMovimiento(id) {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Esta acción no se puede deshacer",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/equipment/movimiento/delete/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    }
                 });
-        }
-
-        movimientoForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const id = document.getElementById('movimiento_id').value;
-            const url = id ? `/equipment/movimiento/update/${id}/` : '/equipment/movimiento/create/';
-            
-            fetch(url, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    Swal.fire('¡Éxito!', 'Operación completada exitosamente', 'success')
-                    .then(() => {
-                        movimientoModal.hide();
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire('Error', data.message, 'error');
-                }
-            });
+            }
         });
+    }
 
-        function deleteMovimiento(id) {
-            Swal.fire({
-                title: '¿Estás seguro?',
-                text: "Esta acción no se puede revertir",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/equipment/movimiento/delete/${id}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            Swal.fire('¡Eliminado!', 'El movimiento ha sido eliminado.', 'success')
-                            .then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire('Error', data.message, 'error');
-                        }
-                    });
-                }
-            });
-        }
-    </script>
-</body>
-</html>
-
-<!-- Add Chart.js initialization -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Gráfico de movimientos por tipo
-    new Chart(document.getElementById('movimientosPorTipo'), {
-        type: 'doughnut',
-        data: {
-            labels: {{ tipos_movimiento|safe }},
-            datasets: [{
-                data: {{ movimientos_por_tipo }},
-                backgroundColor: [
-                    '#1a2980',
-                    '#26d0ce',
-                    '#764ba2',
-                    '#667eea'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                title: {
-                    display: true,
-                    text: 'Distribución por Tipo de Movimiento'
-                }
+    movimientoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const id = document.getElementById('movimiento_id').value;
+        const url = id ? `/equipment/movimiento/update/${id}/` : '/equipment/movimiento/create/';
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                movimientoModal.hide();
+                location.reload();
             }
-        }
+        });
     });
 
-    // Gráfico de movimientos por mes
-    new Chart(document.getElementById('movimientosPorMes'), {
-        type: 'line',
-        data: {
-            labels: {{ meses|safe }},
-            datasets: [{
-                label: 'Movimientos',
-                data: {{ movimientos_por_mes }},
-                borderColor: '#1a2980',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Tendencia de Movimientos por Mes'
-                }
-            }
-        }
-    });
+    // Charts code remains the same...
 </script>
