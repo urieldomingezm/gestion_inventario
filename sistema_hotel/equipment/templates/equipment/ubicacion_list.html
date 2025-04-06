@@ -156,12 +156,171 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-white">
+                        <!-- Update the header section -->
                         <div class="d-flex justify-content-between align-items-center">
                             <h3 class="mb-0">Gestión de Ubicaciones</h3>
-                            <button class="btn btn-primary" onclick="showCreateModal()">
-                                <i class="fas fa-plus"></i> Nueva Ubicación
-                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-success me-2" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                                <button class="btn btn-danger me-2" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                                <button class="btn btn-primary" onclick="showCreateModal()">
+                                    <i class="fas fa-plus"></i> Nueva Ubicación
+                                </button>
+                            </div>
                         </div>
+                        
+                        <!-- Add before closing body tag -->
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+                        
+                        <script>
+                            function exportToExcel() {
+                                const table = document.getElementById('ubicacionesTable');
+                                const rows = Array.from(table.querySelectorAll('tr'));
+                                
+                                const wb = XLSX.utils.book_new();
+                                const ws = XLSX.utils.aoa_to_sheet([]);
+                                
+                                // Add title and date
+                                XLSX.utils.sheet_add_aoa(ws, [['REGISTRO DE UBICACIONES']], { origin: 'B1' });
+                                XLSX.utils.sheet_add_aoa(ws, [[`Fecha de exportación: ${new Date().toLocaleDateString()}`]], { origin: 'B2' });
+                                
+                                // Get headers and data (excluding the Actions column)
+                                const headers = Array.from(rows[0].querySelectorAll('th'))
+                                    .slice(0, -1)
+                                    .map(th => th.textContent);
+                                
+                                const data = rows.slice(1).map(row => 
+                                    Array.from(row.querySelectorAll('td'))
+                                        .slice(0, -1)
+                                        .map(td => td.textContent.trim())
+                                );
+                                
+                                // Add headers and data
+                                XLSX.utils.sheet_add_aoa(ws, [headers], { origin: 'A4' });
+                                XLSX.utils.sheet_add_aoa(ws, data, { origin: 'A5' });
+                                
+                                // Style configurations
+                                const headerStyle = {
+                                    fill: { fgColor: { rgb: "1A2980" } },
+                                    font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: {
+                                        top: { style: "medium" },
+                                        bottom: { style: "medium" },
+                                        left: { style: "medium" },
+                                        right: { style: "medium" }
+                                    }
+                                };
+                                
+                                const dataStyle = {
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: {
+                                        top: { style: "thin" },
+                                        bottom: { style: "thin" },
+                                        left: { style: "thin" },
+                                        right: { style: "thin" }
+                                    }
+                                };
+                                
+                                // Apply styles
+                                const range = XLSX.utils.decode_range(ws['!ref']);
+                                for(let C = range.s.c; C <= range.e.c; C++) {
+                                    const headerCell = XLSX.utils.encode_cell({r: 3, c: C});
+                                    if(!ws[headerCell]) ws[headerCell] = {};
+                                    ws[headerCell].s = headerStyle;
+                                    
+                                    for(let R = 4; R <= range.e.r; R++) {
+                                        const cell = XLSX.utils.encode_cell({r: R, c: C});
+                                        if(!ws[cell]) ws[cell] = {};
+                                        ws[cell].s = dataStyle;
+                                    }
+                                }
+                                
+                                // Set column widths
+                                const colWidths = [
+                                    { wch: 10 }, // ID
+                                    { wch: 30 }, // Nombre
+                                    { wch: 50 }  // Descripción
+                                ];
+                                ws['!cols'] = colWidths;
+                                
+                                XLSX.utils.book_append_sheet(wb, ws, "Ubicaciones");
+                                
+                                // Generate and download file
+                                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+                                
+                                function s2ab(s) {
+                                    const buf = new ArrayBuffer(s.length);
+                                    const view = new Uint8Array(buf);
+                                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                                    return buf;
+                                }
+                                
+                                const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'ubicaciones_' + new Date().toISOString().split('T')[0] + '.xlsx';
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                            }
+                        
+                            function exportToPDF() {
+                                const { jsPDF } = window.jspdf;
+                                const doc = new jsPDF();
+                                
+                                // Add title
+                                doc.setFontSize(18);
+                                doc.text('Registro de Ubicaciones', 14, 20);
+                                
+                                // Add date
+                                doc.setFontSize(11);
+                                doc.text('Fecha de exportación: ' + new Date().toLocaleDateString(), 14, 30);
+                                
+                                // Create the table
+                                doc.autoTable({
+                                    html: '#ubicacionesTable',
+                                    startY: 35,
+                                    styles: { fontSize: 9 },
+                                    columnStyles: { 
+                                        0: { cellWidth: 20 },  // ID
+                                        1: { cellWidth: 50 },  // Nombre
+                                        2: { cellWidth: 80 }   // Descripción
+                                    },
+                                    headStyles: { 
+                                        fillColor: [26, 41, 128],
+                                        textColor: [255, 255, 255],
+                                        halign: 'center'
+                                    },
+                                    bodyStyles: {
+                                        halign: 'center'
+                                    },
+                                    columns: [
+                                        { header: 'ID' },
+                                        { header: 'Nombre' },
+                                        { header: 'Descripción' }
+                                    ],
+                                    didDrawPage: function(data) {
+                                        // Add page number
+                                        doc.setFontSize(8);
+                                        doc.text(
+                                            'Página ' + doc.internal.getCurrentPageInfo().pageNumber + ' de ' + doc.internal.getNumberOfPages(),
+                                            doc.internal.pageSize.width - 20, 
+                                            doc.internal.pageSize.height - 10,
+                                            { align: 'right' }
+                                        );
+                                    }
+                                });
+                                
+                                // Save the PDF
+                                doc.save('ubicaciones_' + new Date().toISOString().split('T')[0] + '.pdf');
+                            }
+                        </script>
                     </div>
                     <div class="card-body">
                         <table id="ubicacionesTable" class="table table-striped">
@@ -209,13 +368,19 @@
                     <form id="ubicacionForm">
                         {% csrf_token %}
                         <input type="hidden" id="ubicacion_id" name="ubicacion_id">
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion"></textarea>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="descripcion" class="form-label">Descripción</label>
+                                    <textarea class="form-control" id="descripcion" name="descripcion" rows="1"></textarea>
+                                </div>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

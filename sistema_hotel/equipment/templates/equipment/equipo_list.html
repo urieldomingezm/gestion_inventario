@@ -150,9 +150,17 @@
                     <div class="card-header bg-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <h3 class="mb-0">Lista de Equipos</h3>
-                            <button class="btn btn-primary" onclick="showCreateModal()">
-                                <i class="fas fa-plus"></i> Nuevo Equipo
-                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-success me-2" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                                <button class="btn btn-danger me-2" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                                <button class="btn btn-primary" onclick="showCreateModal()">
+                                    <i class="fas fa-plus"></i> Nuevo Equipo
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body">
@@ -207,37 +215,43 @@
                     <form id="equipoForm">
                         {% csrf_token %}
                         <input type="hidden" id="equipo_id" name="equipo_id">
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="numero_serie" class="form-label">Número de Serie</label>
-                            <input type="text" class="form-control" id="numero_serie" name="numero_serie" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="categoria" class="form-label">Categoría</label>
-                            <select class="form-select" id="categoria" name="categoria" required>
-                                {% for categoria in categorias %}
-                                    <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="estado" class="form-label">Estado</label>
-                            <select class="form-select" id="estado" name="estado" required>
-                                <option value="Operativo">Operativo</option>
-                                <option value="En mantenimiento">En mantenimiento</option>
-                                <option value="Fuera de servicio">Fuera de servicio</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="ubicacion" class="form-label">Ubicación</label>
-                            <select class="form-select" id="ubicacion" name="ubicacion" required>
-                                {% for ubicacion in ubicaciones %}
-                                    <option value="{{ ubicacion.id }}">{{ ubicacion.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="numero_serie" class="form-label">Número de Serie</label>
+                                    <input type="text" class="form-control" id="numero_serie" name="numero_serie" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="categoria" class="form-label">Categoría</label>
+                                    <select class="form-select" id="categoria" name="categoria" required>
+                                        {% for categoria in categorias %}
+                                            <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="estado" class="form-label">Estado</label>
+                                    <select class="form-select" id="estado" name="estado" required>
+                                        <option value="Operativo">Operativo</option>
+                                        <option value="En mantenimiento">En mantenimiento</option>
+                                        <option value="Fuera de servicio">Fuera de servicio</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ubicacion" class="form-label">Ubicación</label>
+                                    <select class="form-select" id="ubicacion" name="ubicacion" required>
+                                        {% for ubicacion in ubicaciones %}
+                                            <option value="{{ ubicacion.id }}">{{ ubicacion.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -414,7 +428,6 @@
             });
         }
 
-        // Initialize charts
         // In the charts initialization section, update the options:
         new Chart(document.getElementById('equiposPorCategoria'), {
             type: 'doughnut',
@@ -488,3 +501,128 @@
     </script>
 </body>
 </html>
+
+<!-- Add before the closing </body> tag -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+    function exportToExcel() {
+        // Get the table data
+        const table = document.getElementById('equiposTable');
+        const rows = Array.from(table.querySelectorAll('tr'));
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([]);
+        
+        // Add title
+        XLSX.utils.sheet_add_aoa(ws, [['LISTA DE EQUIPOS']], { origin: 'B1' });
+        XLSX.utils.sheet_add_aoa(ws, [[`Fecha: ${new Date().toLocaleDateString()}`]], { origin: 'B2' });
+        
+        // Get headers and data
+        const headers = Array.from(rows[0].querySelectorAll('th')).map(th => th.textContent);
+        const data = rows.slice(1).map(row => 
+            Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim())
+        );
+        
+        // Add headers and data
+        XLSX.utils.sheet_add_aoa(ws, [headers], { origin: 'A4' });
+        XLSX.utils.sheet_add_aoa(ws, data, { origin: 'A5' });
+        
+        // Style configurations
+        const headerStyle = {
+            fill: { fgColor: { rgb: "1A2980" } },
+            font: { color: { rgb: "FFFFFF" }, bold: true },
+            alignment: { horizontal: "center" }
+        };
+        
+        const dataStyle = {
+            alignment: { horizontal: "center" },
+            border: {
+                top: { style: "thin" },
+                bottom: { style: "thin" },
+                left: { style: "thin" },
+                right: { style: "thin" }
+            }
+        };
+        
+        // Apply styles
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for(let C = range.s.c; C <= range.e.c; C++) {
+            // Header style
+            const headerCell = XLSX.utils.encode_cell({r: 3, c: C});
+            if(!ws[headerCell]) ws[headerCell] = {};
+            ws[headerCell].s = headerStyle;
+            
+            // Data styles
+            for(let R = 4; R <= range.e.r; R++) {
+                const cell = XLSX.utils.encode_cell({r: R, c: C});
+                if(!ws[cell]) ws[cell] = {};
+                ws[cell].s = dataStyle;
+            }
+        }
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 8 },  // ID
+            { wch: 25 }, // Nombre
+            { wch: 20 }, // Número de Serie
+            { wch: 20 }, // Categoría
+            { wch: 15 }, // Estado
+            { wch: 20 }, // Ubicación
+            { wch: 15 }  // Acciones
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add the worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, "Equipos");
+        
+        // Generate and download file
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        
+        function s2ab(s) {
+            const buf = new ArrayBuffer(s.length);
+            const view = new Uint8Array(buf);
+            for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
+        
+        const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'equipos_' + new Date().toISOString().split('T')[0] + '.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(18);
+        doc.text('Lista de Equipos', 14, 20);
+        
+        // Add date
+        doc.setFontSize(11);
+        doc.text('Fecha: ' + new Date().toLocaleDateString(), 14, 30);
+
+        // Create the table
+        doc.autoTable({
+            html: '#equiposTable',
+            startY: 35,
+            styles: { fontSize: 8 },
+            columnStyles: { 0: { cellWidth: 10 } },
+            headStyles: { 
+                fillColor: [26, 41, 128],
+                textColor: [255, 255, 255]
+            }
+        });
+
+        // Save the PDF
+        doc.save('equipos_' + new Date().toISOString().split('T')[0] + '.pdf');
+    }
+</script>

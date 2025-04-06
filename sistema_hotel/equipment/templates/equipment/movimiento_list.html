@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,18 +15,21 @@
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
         .card {
             border: none;
             border-radius: 20px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
             backdrop-filter: blur(10px);
             background: rgba(255, 255, 255, 0.95);
         }
+
         .card-header {
             background: transparent;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             padding: 1.5rem;
         }
+
         .btn-primary {
             background: linear-gradient(45deg, #1a2980, #26d0ce);
             border: none;
@@ -33,30 +37,36 @@
             border-radius: 10px;
             transition: all 0.3s ease;
         }
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(38, 208, 206, 0.3);
         }
+
         .dashboard-header {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+
         .stats-container {
             margin-bottom: 25px;
         }
+
         .stat-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s ease;
         }
+
         .stat-card:hover {
             transform: translateY(-5px);
         }
+
         .stat-icon {
             font-size: 2rem;
             background: linear-gradient(45deg, #1a2980, #26d0ce);
@@ -64,21 +74,24 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
+
         .stat-value {
             font-size: 1.8rem;
             font-weight: bold;
             color: #1a2980;
         }
+
         .stat-label {
             color: #666;
             font-size: 0.9rem;
         }
+
         .chart-container {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             height: 350px;
             position: relative;
             display: flex;
@@ -87,6 +100,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container-fluid mt-4">
         <!-- Dashboard Header -->
@@ -155,12 +169,190 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-white">
+                        <!-- Add buttons next to "Nuevo Movimiento" -->
                         <div class="d-flex justify-content-between align-items-center">
                             <h3 class="mb-0">Control de Movimientos</h3>
-                            <button class="btn btn-primary" onclick="showCreateModal()">
-                                <i class="fas fa-plus"></i> Nuevo Movimiento
-                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-success me-2" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                                <button class="btn btn-danger me-2" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                                <button class="btn btn-primary" onclick="showCreateModal()">
+                                    <i class="fas fa-plus"></i> Nuevo Movimiento
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- Add before closing body tag -->
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+                        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+                        <script
+                            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+                        <script>
+                            // Export functions
+                            function exportToExcel() {
+                                // Get the table data
+                                const table = document.getElementById('movimientosTable');
+                                const rows = Array.from(table.querySelectorAll('tr'));
+
+                                // Create workbook and worksheet
+                                const wb = XLSX.utils.book_new();
+                                const ws = XLSX.utils.aoa_to_sheet([]);
+
+                                // Add title and date
+                                XLSX.utils.sheet_add_aoa(ws, [['REGISTRO DE MOVIMIENTOS DE EQUIPOS']], { origin: 'B1' });
+                                XLSX.utils.sheet_add_aoa(ws, [[`Fecha de exportación: ${new Date().toLocaleDateString()}`]], { origin: 'B2' });
+
+                                // Get headers and data (excluding the Actions column)
+                                const headers = Array.from(rows[0].querySelectorAll('th'))
+                                    .slice(0, -1)
+                                    .map(th => th.textContent);
+
+                                const data = rows.slice(1).map(row =>
+                                    Array.from(row.querySelectorAll('td'))
+                                        .slice(0, -1)
+                                        .map(td => td.textContent.trim())
+                                );
+
+                                // Add headers and data
+                                XLSX.utils.sheet_add_aoa(ws, [headers], { origin: 'A4' });
+                                XLSX.utils.sheet_add_aoa(ws, data, { origin: 'A5' });
+
+                                // Style configurations
+                                const headerStyle = {
+                                    fill: { fgColor: { rgb: "1A2980" } },
+                                    font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: {
+                                        top: { style: "medium" },
+                                        bottom: { style: "medium" },
+                                        left: { style: "medium" },
+                                        right: { style: "medium" }
+                                    }
+                                };
+
+                                const dataStyle = {
+                                    alignment: { horizontal: "center", vertical: "center" },
+                                    border: {
+                                        top: { style: "thin" },
+                                        bottom: { style: "thin" },
+                                        left: { style: "thin" },
+                                        right: { style: "thin" }
+                                    }
+                                };
+
+                                // Apply styles
+                                const range = XLSX.utils.decode_range(ws['!ref']);
+                                for (let C = range.s.c; C <= range.e.c; C++) {
+                                    // Header style
+                                    const headerCell = XLSX.utils.encode_cell({ r: 3, c: C });
+                                    if (!ws[headerCell]) ws[headerCell] = {};
+                                    ws[headerCell].s = headerStyle;
+
+                                    // Data styles
+                                    for (let R = 4; R <= range.e.r; R++) {
+                                        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+                                        if (!ws[cell]) ws[cell] = {};
+                                        ws[cell].s = dataStyle;
+                                    }
+                                }
+
+                                // Set column widths
+                                const colWidths = [
+                                    { wch: 8 },  // ID
+                                    { wch: 25 }, // Equipo
+                                    { wch: 20 }, // Tipo
+                                    { wch: 30 }, // Descripción
+                                    { wch: 20 }, // Fecha
+                                    { wch: 20 }, // Responsable
+                                    { wch: 20 }  // Nueva Ubicación
+                                ];
+                                ws['!cols'] = colWidths;
+
+                                // Add the worksheet to workbook
+                                XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+
+                                // Generate and download file
+                                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+                                function s2ab(s) {
+                                    const buf = new ArrayBuffer(s.length);
+                                    const view = new Uint8Array(buf);
+                                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                                    return buf;
+                                }
+
+                                const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'movimientos_' + new Date().toISOString().split('T')[0] + '.xlsx';
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                            }
+
+                            function exportToPDF() {
+                                const { jsPDF } = window.jspdf;
+                                const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+
+                                // Add title
+                                doc.setFontSize(18);
+                                doc.text('Registro de Movimientos de Equipos', 14, 20);
+
+                                // Add date
+                                doc.setFontSize(11);
+                                doc.text('Fecha de exportación: ' + new Date().toLocaleDateString(), 14, 30);
+
+                                // Create the table
+                                doc.autoTable({
+                                    html: '#movimientosTable',
+                                    startY: 35,
+                                    styles: { fontSize: 8 },
+                                    columnStyles: {
+                                        0: { cellWidth: 15 }, // ID
+                                        1: { cellWidth: 35 }, // Equipo
+                                        2: { cellWidth: 25 }, // Tipo
+                                        3: { cellWidth: 45 }, // Descripción
+                                        4: { cellWidth: 25 }, // Fecha
+                                        5: { cellWidth: 25 }, // Responsable
+                                        6: { cellWidth: 30 }  // Nueva Ubicación
+                                    },
+                                    headStyles: {
+                                        fillColor: [26, 41, 128],
+                                        textColor: [255, 255, 255],
+                                        halign: 'center'
+                                    },
+                                    bodyStyles: {
+                                        halign: 'center'
+                                    },
+                                    columns: [
+                                        { header: 'ID' },
+                                        { header: 'Equipo' },
+                                        { header: 'Tipo' },
+                                        { header: 'Descripción' },
+                                        { header: 'Fecha' },
+                                        { header: 'Responsable' },
+                                        { header: 'Nueva Ubicación' }
+                                    ],
+                                    didDrawPage: function (data) {
+                                        // Add page number
+                                        doc.setFontSize(8);
+                                        doc.text(
+                                            'Página ' + doc.internal.getCurrentPageInfo().pageNumber + ' de ' + doc.internal.getNumberOfPages(),
+                                            doc.internal.pageSize.width - 20,
+                                            doc.internal.pageSize.height - 10,
+                                            { align: 'right' }
+                                        );
+                                    }
+                                });
+
+                                // Save the PDF
+                                doc.save('movimientos_' + new Date().toISOString().split('T')[0] + '.pdf');
+                            }
+                        </script>
                     </div>
                     <div class="card-body">
                         <table id="movimientosTable" class="table table-striped">
@@ -187,10 +379,12 @@
                                     <td>{{ movimiento.usuario_responsable }}</td>
                                     <td>{{ movimiento.nueva_ubicacion.nombre|default:"-" }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-info" onclick="showEditModal({{ movimiento.id }})">
+                                        <button class="btn btn-sm btn-info"
+                                            onclick="showEditModal({{ movimiento.id }})">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteMovimiento({{ movimiento.id }})">
+                                        <button class="btn btn-sm btn-danger"
+                                            onclick="deleteMovimiento({{ movimiento.id }})">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
@@ -216,35 +410,40 @@
                     <form id="movimientoForm">
                         {% csrf_token %}
                         <input type="hidden" id="movimiento_id" name="movimiento_id">
-                        <div class="mb-3">
-                            <label for="equipo" class="form-label">Equipo</label>
-                            <select class="form-select" id="equipo" name="equipo" required>
-                                {% for equipo in equipos %}
-                                    <option value="{{ equipo.id }}">{{ equipo.nombre }} - {{ equipo.numero_serie }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="equipo" class="form-label">Equipo</label>
+                                <select class="form-select" id="equipo" name="equipo" required>
+                                    {% for equipo in equipos %}
+                                    <option value="{{ equipo.id }}">{{ equipo.nombre }} - {{ equipo.numero_serie }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tipo" class="form-label">Tipo de Movimiento</label>
+                                <select class="form-select" id="tipo" name="tipo" required>
+                                    <option value="Asignación">Asignación</option>
+                                    <option value="Cambio de ubicación">Cambio de ubicación</option>
+                                    <option value="Mantenimiento">Mantenimiento</option>
+                                    <option value="Baja">Baja</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="tipo" class="form-label">Tipo de Movimiento</label>
-                            <select class="form-select" id="tipo" name="tipo" required>
-                                <option value="Asignación">Asignación</option>
-                                <option value="Cambio de ubicación">Cambio de ubicación</option>
-                                <option value="Mantenimiento">Mantenimiento</option>
-                                <option value="Baja">Baja</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion" required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="nueva_ubicacion" class="form-label">Nueva Ubicación</label>
-                            <select class="form-select" id="nueva_ubicacion" name="nueva_ubicacion">
-                                <option value="">Seleccionar ubicación...</option>
-                                {% for ubicacion in ubicaciones %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" required></textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="nueva_ubicacion" class="form-label">Nueva Ubicación</label>
+                                <select class="form-select" id="nueva_ubicacion" name="nueva_ubicacion">
+                                    <option value="">Seleccionar ubicación...</option>
+                                    {% for ubicacion in ubicaciones %}
                                     <option value="{{ ubicacion.id }}">{{ ubicacion.nombre }}</option>
-                                {% endfor %}
-                            </select>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -269,62 +468,63 @@
         new Chart(movimientosPorTipoCtx, {
             type: 'doughnut',
             data: {
-                labels: {{ tipos_movimiento|safe }},
-                datasets: [{
-                    data: {{ movimientos_por_tipo|safe }},
-                    backgroundColor: [
-                        'rgba(26, 41, 128, 0.7)',
-                        'rgba(38, 208, 206, 0.7)',
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(255, 205, 86, 0.7)'
-                    ],
-                    borderWidth: 1
+                labels: {{ tipos_movimiento| safe }},
+            datasets: [{
+                data: {{ movimientos_por_tipo| safe }},
+            backgroundColor: [
+                'rgba(26, 41, 128, 0.7)',
+                'rgba(38, 208, 206, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(255, 205, 86, 0.7)'
+            ],
+            borderWidth: 1
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Distribución de Movimientos por Tipo'
-                    }
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Distribución de Movimientos por Tipo'
                 }
             }
+        }
         });
 
         const movimientosPorMesCtx = document.getElementById('movimientosPorMes').getContext('2d');
         new Chart(movimientosPorMesCtx, {
             type: 'line',
             data: {
-                labels: {{ meses|safe }},
-                datasets: [{
-                    label: 'Movimientos por Mes',
-                    data: {{ movimientos_por_mes|safe }},
-                    backgroundColor: 'rgba(38, 208, 206, 0.7)',
-                    borderColor: 'rgba(38, 208, 206, 1)',
-                    borderWidth: 2,
-                    tension: 0.3
+                labels: {{ meses| safe }},
+            datasets: [{
+                label: 'Movimientos por Mes',
+                data: {{ movimientos_por_mes| safe }},
+            backgroundColor: 'rgba(38, 208, 206, 0.7)',
+            borderColor: 'rgba(38, 208, 206, 1)',
+            borderWidth: 2,
+            tension: 0.3
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Tendencia de Movimientos por Mes'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Tendencia de Movimientos por Mes'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
+        }
         });
     </script>
-    </body>
+</body>
+
 </html>
 
 <script>
@@ -373,33 +573,33 @@
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        location.reload();
-                    }
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        }
+                    });
             }
         });
     }
 
-    movimientoForm.addEventListener('submit', function(e) {
+    movimientoForm.addEventListener('submit', function (e) {
         e.preventDefault();
         const formData = new FormData(this);
         const id = document.getElementById('movimiento_id').value;
         const url = id ? `/equipment/movimiento/update/${id}/` : '/equipment/movimiento/create/';
-        
+
         fetch(url, {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                movimientoModal.hide();
-                location.reload();
-            }
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    movimientoModal.hide();
+                    location.reload();
+                }
+            });
     });
 
     // Charts code remains the same...
