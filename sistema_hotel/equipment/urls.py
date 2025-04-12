@@ -10,6 +10,7 @@ urlpatterns = [
     path('equipo/<int:pk>/', equipo_views.equipo_detail, name='equipo_detail'),
     path('equipo/update/<int:pk>/', equipo_views.equipo_update, name='equipo_update'),
     path('equipo/delete/<int:pk>/', equipo_views.equipo_delete, name='equipo_delete'),
+    path('import-excel/', equipo_views.import_excel, name='import_excel'),
 
     # Location URLs
     path('ubicaciones/', ubicacion_views.ubicacion_list, name='ubicacion_list'),

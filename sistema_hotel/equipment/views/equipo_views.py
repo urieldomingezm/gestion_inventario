@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from ..models import Equipo, Categoria, Ubicacion
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 @login_required
 def equipo_list(request):
@@ -124,6 +126,65 @@ def equipo_delete(request, pk):
                 'status': 'error',
                 'message': str(e)
             })
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Método no permitido'
+    })
+
+
+@csrf_exempt
+def import_excel(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            equipos = data.get('equipos', [])
+            
+            for equipo_data in equipos:
+                # Get or create categoria and ubicacion by name
+                categoria_nombre = equipo_data.get('categoria')
+                ubicacion_nombre = equipo_data.get('ubicacion')
+                
+                try:
+                    categoria = Categoria.objects.get(nombre=categoria_nombre)
+                except Categoria.DoesNotExist:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Categoría no encontrada: {categoria_nombre}'
+                    })
+                
+                try:
+                    ubicacion = Ubicacion.objects.get(nombre=ubicacion_nombre)
+                except Ubicacion.DoesNotExist:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Ubicación no encontrada: {ubicacion_nombre}'
+                    })
+                
+                # Create the equipment
+                Equipo.objects.create(
+                    nombre=equipo_data.get('nombre'),
+                    numero_serie=equipo_data.get('numero_serie'),
+                    categoria=categoria,
+                    estado=equipo_data.get('estado'),
+                    ubicacion=ubicacion
+                )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Se importaron {len(equipos)} equipos correctamente'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Error al decodificar JSON'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
     return JsonResponse({
         'status': 'error',
         'message': 'Método no permitido'

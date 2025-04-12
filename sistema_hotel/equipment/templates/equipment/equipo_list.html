@@ -151,6 +151,10 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h3 class="mb-0">Lista de Equipos</h3>
                             <div class="btn-group">
+                                <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importFromExcel(this)">
+                                <button class="btn btn-success me-2" onclick="document.getElementById('excelFileInput').click()">
+                                    <i class="fas fa-file-import"></i> Importar Excel
+                                </button>
                                 <button class="btn btn-success me-2" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel"></i> Exportar Excel
                                 </button>
@@ -506,6 +510,101 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+    function importFromExcel(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Importando datos del archivo Excel',
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false
+        });
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                // Validate headers
+                const expectedHeaders = ['Nombre', 'Número de Serie', 'Categoría', 'Estado', 'Ubicación'];
+                const headers = jsonData[0];
+                
+                if (!headers || headers.length < expectedHeaders.length) {
+                    throw new Error('El archivo Excel no tiene el formato correcto');
+                }
+
+                // Skip header row and process data
+                const equipos = [];
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (row.length >= 5) {
+                        equipos.push({
+                            nombre: row[0],
+                            numero_serie: row[1],
+                            categoria: row[2],
+                            estado: row[3],
+                            ubicacion: row[4]
+                        });
+                    }
+                }
+
+                if (equipos.length === 0) {
+                    throw new Error('No se encontraron datos para importar');
+                }
+
+                // Send data to server
+                fetch('/equipment/import-excel/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ equipos: equipos })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: data.message,
+                            confirmButtonColor: '#3085d6'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Error al importar datos');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'Error al procesar el archivo',
+                        confirmButtonColor: '#3085d6'
+                    });
+                });
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Error al procesar el archivo Excel',
+                    confirmButtonColor: '#3085d6'
+                });
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+</script>
 
 <script>
     function exportToExcel() {
